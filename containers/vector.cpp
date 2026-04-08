@@ -27,10 +27,17 @@ void DemoVector(){
     v2.push_back("!");
     cout << v2 << endl;
     cout << v2.toString() << endl;
+    
+    // TODO
+    Vector<int> v3(5);
+    cout << "ingresar los numeros por espacio ";
+    cin >> v3;
+    cout << v3 << endl;
 
+    /*
     ofstream of("temp.txt");
     of << v1 << endl;
     of << v2 << endl;
     // of.close();
-    
+    */
 }
