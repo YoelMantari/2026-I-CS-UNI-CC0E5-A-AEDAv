@@ -5,6 +5,7 @@
 #include <cstddef> // size_t
 #include <string>
 #include <sstream>
+#include <vector>
 #include <mutex>   // mutex
 #include "general_iterator.h"
 #include "util.h"
@@ -88,14 +89,20 @@ public:
     backward_iterator rend()   { return backward_iterator(this, m_data - 1); }
     
     // TODO: Agregar control concurrente
+    // bloquea el vector mientras recorre
     template <typename Func, typename... Args>
     void ForEach(Func func, Args &&...  args){
+        scoped_lock lock(m_mtx);
         ::ForEach(begin(), end(), func, std::forward<Args>(args)... );
     }
 
     // TODO: Agregar control concurrente
+    // bloquea y recorre al reves si hay datos
     template <typename Func, typename... Args>
     void ReverseForEach(Func func, Args &&...  args){
+        scoped_lock lock(m_mtx);
+        if(m_size == 0)
+            return;
         ::ForEach(rbegin(), rend(), func, std::forward<Args>(args)... );
     }
 };
@@ -163,6 +170,66 @@ ostream& operator<<(ostream& os, Vector<T>& v){
 // TODO: Implementar como PR
 template <typename T>
 istream& operator>>(istream& is, Vector<T>& v){
+    // que detecte la entrada con corchete
+    char car;
+    if(!(is >> car) || car != '['){
+        is.setstate(std::ios::failbit);
+        return is;
+    }
+
+    // que acepte un acepte un vector vacio
+    is >> ws;
+    if(is.peek() == ']'){
+        is.get();
+        return is;
+    }
+
+    // leer los parentesis el dato y la referencia, validar formato
+    vector<pair<T, Ref>> regs;
+    while(1){
+        T dato;
+        Ref rfr;
+
+        // verifca cada inicio de registro
+        if(!(is >> car) || car != '('){
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+        // leemos el dato y despues se valida el separador
+        if(!(is >> dato))
+            return is;
+        if(!(is >> car) || car != ','){
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+        // se lee la referencia del registro y se valida el cierre
+        if(!(is >> rfr))
+            return is;
+        if(!(is >> car) || car != ')'){
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+
+        // se guarda temporalmnte el registro leido
+        regs.emplace_back(dato, rfr);
+
+        // se decide si continua leyendo otro registro
+        // o se termina
+        is >> ws;
+        if(!(is >> car))
+            return is;
+        if(car == ']')
+            break;
+        if(car != ','){
+            is.setstate(std::ios::failbit);
+            return is;
+        }
+    }
+
+    // guardamos los registros leidos en el vector
+    for(const auto& reg : regs)
+        v.push_back(reg.first, reg.second);
+
     return is;
 }
 
