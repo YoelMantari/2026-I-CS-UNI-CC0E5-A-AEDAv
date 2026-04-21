@@ -200,6 +200,7 @@ void LinkedList<Trait>::insert(const value_type &value, Ref ref){
         m_tail = m_tail->getNext();
 }
 
+// t5 inserta un elemento al inicio
 template <typename Trait>
 void LinkedList<Trait>::push_front(value_type value, Ref ref){
     unique_lock<shared_mutex> lock(m_mtx);
@@ -210,6 +211,7 @@ void LinkedList<Trait>::push_front(value_type value, Ref ref){
     m_size++;
 }
 
+// t6 elimina el primer elemento si existe
 template <typename Trait>
 void LinkedList<Trait>::pop_front(){
     unique_lock<shared_mutex> lock(m_mtx);
@@ -223,6 +225,7 @@ void LinkedList<Trait>::pop_front(){
         m_tail = nullptr;
 }
 
+// t7 inserta un elemento al final
 template <typename Trait>
 void LinkedList<Trait>::push_back(value_type value, Ref ref){
     unique_lock<shared_mutex> lock(m_mtx);
@@ -237,6 +240,7 @@ void LinkedList<Trait>::push_back(value_type value, Ref ref){
     m_size++;
 }
 
+// t8 elimina el ultimo elemento si existe
 template <typename Trait>
 void LinkedList<Trait>::pop_back(){
     unique_lock<shared_mutex> lock(m_mtx);
