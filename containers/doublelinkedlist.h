@@ -15,6 +15,7 @@ class DLLNode : public LLNode<T, DLLNode<T>>{
         Node*  getPrev() const     { return m_pPrev; }
         void   setPrev(Node *prev) { m_pPrev = prev; }
         Node*& getPrevRef()        { return m_pPrev; }
+        Node* getNext2();
 
 };
 
