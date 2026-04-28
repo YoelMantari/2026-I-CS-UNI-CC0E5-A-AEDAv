@@ -3,7 +3,7 @@
 #include "linkedlist.h"
 
 // TODO Los iteradores ahora son forward y backward
-// Crear 2 nuevos i
+// Crear 2 nuevos i 
 template <typename T>
 class DLLNode : public LLNode<T, DLLNode<T>>{
     private:
