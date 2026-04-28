@@ -15,7 +15,8 @@ protected:
 public:
     general_iterator(Container *pContainer, Node *pNode)
         : m_pContainer(pContainer), m_pNode(pNode) {}
-    general_iterator(myself &other) 
+    //ahora el constructor recibe const my selft
+    general_iterator(const myself &other) 
           : m_pContainer(other.m_pContainer), m_pNode(other.m_pNode){}
     general_iterator(myself &&other) // Move constructor
           {   m_pContainer = move(other.m_pContainer);
@@ -28,10 +29,12 @@ public:
           }
     Node *getNode() const { return m_pNode; }
     friend bool operator==(const IteratorBase &a, const IteratorBase &b) { return a.getNode() == b.getNode(); }
+
+    // operador negacion para bucles for que son en rangos y las comparaciones
+    friend bool operator!=(const IteratorBase &a, const IteratorBase &b) { return a.getNode() != b.getNode(); }
     typename Container::value_type &operator*(){
         return m_pNode->getDataRef();
     }
 };
 
 #endif
- 

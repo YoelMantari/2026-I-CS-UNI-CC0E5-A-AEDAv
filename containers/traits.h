@@ -9,3 +9,4 @@ struct BaseTrait{
 };
 
 #endif // __TRAITS_H__
+
