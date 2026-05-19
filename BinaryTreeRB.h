@@ -110,7 +110,7 @@ public:
         Node* parent = nullptr;
         while (curr != node) {
             parent = curr;
-            bool branch = !this->m_comp(curr->m_data, data);
+            bool branch = this->m_comp(curr->m_data, data);
             curr = curr->m_pChild[branch];
         }
         node->m_pParent = parent;

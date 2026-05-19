@@ -33,8 +33,6 @@ using AscendingAVLTrait = AscendingTrait<AVLNode<T>>;
 template <typename T>
 using DescendingAVLTrait = DescendingTrait<AVLNode<T>>;
 
-#endif // __TRAITS_H__
-
 template <typename T> class RBTreeNode;
 
 template <typename T>
@@ -42,3 +40,5 @@ using AscendingRBTrait = AscendingTrait<RBTreeNode<T>>;
 
 template <typename T>
 using DescendingRBTrait = DescendingTrait<RBTreeNode<T>>;
+
+#endif // __TRAITS_H__

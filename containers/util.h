@@ -1,15 +1,14 @@
 #ifndef __UTIL_H__
 #define __UTIL_H__
 #include <ostream>
-using namespace std;
 
 template <typename Container>
-void Print(Container& c, ostream &os){
-    os << c << endl;
+void Print(Container& c, std::ostream &os){
+    os << c << std::endl;
 }
 
 template <typename T>
-void PrintX(T& elem, ostream &os, string sep){
+void PrintX(T& elem, std::ostream &os, std::string sep){
     os << elem << sep;
 }
 
