@@ -4,9 +4,7 @@
 #include "BinaryTree.h"
 #include <algorithm>
 
-// ========================================================
-// 1. Nodo AVL (usa CRTP)
-// ========================================================
+//nodo avl uso de crtp
 template <typename T>
 class AVLNode : public BinaryTreeNodeBase<AVLNode<T>, T> {
 public:
@@ -14,9 +12,7 @@ public:
     AVLNode(T data) : BinaryTreeNodeBase<AVLNode<T>, T>(data), m_height(1) {}
 };
 
-// ========================================================
-// 2. Árbol AVL (Hereda de BinaryTree)
-// ========================================================
+// arbol avl heredada de binarytree
 template <typename Trait>
 class BinaryTreeAVL : public BinaryTree<Trait> {
     using value_type = typename Trait::value_type;

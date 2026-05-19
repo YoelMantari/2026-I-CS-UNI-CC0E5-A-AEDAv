@@ -13,18 +13,17 @@
 
 using namespace std;
 
-// ========================================================
-// 1. Jerarquía de Nodos (CRTP)
-// ========================================================
 
+// uso de nodos CRTP
 template <typename Derived, typename T>
 class BinaryTreeNodeBase {
 public:
     using value_type = T;
     T m_data;
-    Derived* m_pChild[2]; // CRTP asegura el tipo derivado correcto (BinaryTreeNode o AVLNode)
+    // CRTP asegura el tipo derivado correcto BinaryTreeNode avlnode o rdtree
+    Derived* m_pChild[2];
 
-    // Constructores
+    // constructores
     BinaryTreeNodeBase(T data) : m_data(data), m_pChild{nullptr, nullptr} {}
     virtual ~BinaryTreeNodeBase() = default;
 
@@ -38,10 +37,7 @@ public:
     BinaryTreeNode(T data) : BinaryTreeNodeBase<BinaryTreeNode<T>, T>(data) {}
 };
 
-// ========================================================
-// 2. Iteradores
-// ========================================================
-
+// iteradores
 // 4. forward iterator (inorder)
 template <typename C>
 class BTInorderForwardIterator : public general_iterator<C, BTInorderForwardIterator<C>> {
@@ -198,10 +194,8 @@ public:
     }
 };
 
-// ========================================================
-// 3. BinaryTree (Clase Base)
-// ========================================================
 
+// clase binarytree
 template<typename Trait>
 class BinaryTree {
 public:
@@ -249,15 +243,15 @@ protected:
 
 public:
     BinaryTree() : m_pRoot(nullptr), m_size(0) {}
-// 3. Destructor Seguro
     
+    // 3.destructor Seguro
     virtual ~BinaryTree() {
         std::unique_lock<std::shared_mutex> lock(m_mtx);
         destroy(m_pRoot);
     }
 
     // Regla de memoria (copy/move)
-    // 1. Constructor copia
+    // 1.constructor copia
     BinaryTree(const BinaryTree& other) : m_size(other.m_size) {
         std::shared_lock<std::shared_mutex> lock(other.m_mtx);
         m_pRoot = copyTree(other.m_pRoot);
@@ -273,9 +267,9 @@ public:
             m_size = other.m_size;
         }
         return *this;
-    // 2. Move Constructor
     }
 
+    //2.move constructor
     BinaryTree(BinaryTree&& other) noexcept : m_size(0) {
         std::unique_lock<std::shared_mutex> lock(other.m_mtx);
         m_pRoot = other.m_pRoot;
@@ -298,7 +292,7 @@ public:
         return *this;
     }
 
-    /// INSERT virtual polimórfico
+    // insertar base
     virtual void insert(value_type data) {
         std::unique_lock<std::shared_mutex> lock(m_mtx);
         Node** pNode = &m_pRoot;
@@ -310,6 +304,7 @@ public:
         m_size++;
     }
 
+    //remove base
     virtual void remove(value_type data) {
         std::unique_lock<std::shared_mutex> lock(m_mtx);
         Node** pNode = &m_pRoot;
@@ -317,7 +312,7 @@ public:
             auto branch = !m_comp((*pNode)->m_data, data);
             pNode = &((*pNode)->m_pChild[branch]);
         }
-        if (!*pNode) return; // No encontrado
+        if (!*pNode) return; // no encontrado
 
         Node* target = *pNode;
         if (!target->m_pChild[0] && !target->m_pChild[1]) {
@@ -359,9 +354,9 @@ public:
     size_t height() const { 
         std::shared_lock<std::shared_mutex> lock(m_mtx);
         return internal_height(m_pRoot); 
-    // 7. ToString
     }
 
+    // 7.tostring
     std::string ToString() const {
         std::shared_lock<std::shared_mutex> lock(m_mtx);
         std::stringstream ss;
@@ -369,17 +364,16 @@ public:
         bool first = true;
         internal_format_inorder(m_pRoot, ss, first);
         ss << "]";
-    // 8. "operator<< (incluye persistencia a archivos)"
         return ss.str();
     }
 
+    // 8. operator para persistencia en archivos
     friend decltype(auto) operator<<(ostream& os, const BinaryTree& tree) {
         os << tree.ToString();
         return os;
     }
 
-    // operator>> parseando formato [v1,v2,...]
-    // 9. operator>>
+    // 9. operator>> em formato [v1,v2 ...]
     friend decltype(auto) operator>>(istream& is, BinaryTree& tree) {
         std::unique_lock<std::shared_mutex> lock(tree.m_mtx);
         tree.destroy(tree.m_pRoot);
@@ -412,14 +406,13 @@ public:
         }
     }
 
-    // Retorno de iteradores
+    // retorno de iteradores
     using forward_iterator = BTInorderForwardIterator<BinaryTree<Trait>>;
     using backward_iterator = BTInorderBackwardIterator<BinaryTree<Trait>>;
     
     using preorder_forward_iterator = BTPreorderForwardIterator<BinaryTree<Trait>>;
     using preorder_backward_iterator = BTPreorderBackwardIterator<BinaryTree<Trait>>;
     
-    // 6. usar en un bucle nativo foreach
     using postorder_forward_iterator = BTPostorderForwardIterator<BinaryTree<Trait>>;
     using postorder_backward_iterator = BTPostorderBackwardIterator<BinaryTree<Trait>>;
 

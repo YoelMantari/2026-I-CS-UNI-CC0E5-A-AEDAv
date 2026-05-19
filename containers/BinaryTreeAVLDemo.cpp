@@ -5,14 +5,14 @@
 using namespace std;
 
 void DemoAVL() {
-    cout << "=== PRUEBA DE AVL TREE ===" << endl;
+    cout << "Probar AVL Tree" << endl;
     BinaryTreeAVL<AscendingAVLTrait<int>> miAVL;
     for (int i = 1; i <= 7; ++i) {
         miAVL.insert(i);
     }
     
-    cout << "AVL Inorder Fwd:  ";
-    for (auto it = miAVL.begin(); it != miAVL.end(); ++it) cout << *it << " ";
+    cout << "AVL Inorder Fwd (Range-based for): ";
+    for (auto val : miAVL) cout << val << " ";
     cout << endl;
 
     cout << "AVL Inorder Bwd:  ";

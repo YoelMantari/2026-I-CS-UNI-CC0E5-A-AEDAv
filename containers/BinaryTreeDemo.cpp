@@ -5,13 +5,13 @@
 using namespace std;
 
 void DemoBinaryTree() {
-    cout << "=== PRUEBA DE BINARY TREE Y SUS ITERADORES ===" << endl;
+    cout << "Probar binary tree e itradores " << endl;
     BinaryTree<AscendingBSTrait<int>> miBST;
     miBST.insert(5); miBST.insert(3); miBST.insert(7);
     miBST.insert(1); miBST.insert(4); miBST.insert(6); miBST.insert(8);
     
-    cout << "BST Inorder Fwd:  ";
-    for (auto it = miBST.begin(); it != miBST.end(); ++it) cout << *it << " ";
+    cout << "BST Inorder Fwd (Range-based for): ";
+    for (auto val : miBST) cout << val << " ";
     cout << endl;
 
     cout << "BST Inorder Bwd:  ";

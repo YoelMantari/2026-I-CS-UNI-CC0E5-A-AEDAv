@@ -5,13 +5,13 @@
 using namespace std;
 
 void DemoRBT() {
-    cout << "=== PRUEBA DE RED-BLACK TREE ===" << endl;
+    cout << "Probar red black tree" << endl;
     BinaryTreeRB<AscendingRBTrait<int>> miRBT;
     for (int i = 1; i <= 7; ++i) {
         miRBT.insert(i);
     }
-    cout << "RBT Inorder Fwd:  ";
-    for (auto it = miRBT.begin(); it != miRBT.end(); ++it) cout << *it << " ";
+    cout << "RBT Inorder Fwd (Range-based for): ";
+    for (auto val : miRBT) cout << val << " ";
     cout << endl;
 
     cout << "RBT Preorder Fwd: ";

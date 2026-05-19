@@ -5,21 +5,17 @@
 
 enum RBColor { RED, BLACK };
 
-// ========================================================
-// 1. Nodo RBT (usa CRTP)
-// ========================================================
+//nodo rbt uso crtp
 template <typename T>
 class RBTreeNode : public BinaryTreeNodeBase<RBTreeNode<T>, T> {
 public:
     RBColor m_color;
-    RBTreeNode* m_pParent; // Árbol Rojo-Negro normalmente requiere puntero al padre para rotar fácil.
-
+    // arbol rojo-negro puntero al padre para rotar
+    RBTreeNode* m_pParent;
     RBTreeNode(T data) : BinaryTreeNodeBase<RBTreeNode<T>, T>(data), m_color(RED), m_pParent(nullptr) {}
 };
 
-// ========================================================
-// 2. Árbol RBT (Hereda de BinaryTree)
-// ========================================================
+// arbol rbt, hereda de binarytree
 template <typename Trait>
 class BinaryTreeRB : public BinaryTree<Trait> {
     using value_type = typename Trait::value_type;
