@@ -1,22 +1,25 @@
 CXX = g++
-CXXFLAGS = -std=c++2b -Wall -g -pthread # Añadido -pthread
-LDFLAGS = -pthread # Añadido -pthread
+CXXFLAGS = -std=c++2b -Wall -g -pthread
 
-TARGET = main
+# Lista de archivos fuente
 SRCS = main.cpp \
-	   containers/ListsDemo.cpp
+       containers/BinaryTreeDemo.cpp \
+       containers/BinaryTreeAVLDemo.cpp \
+       containers/BinaryTreeRBDemo.cpp
 
+# Archivos objeto generados a partir de los fuentes
 OBJS = $(SRCS:.cpp=.o)
+
+# Nombre del ejecutable
+TARGET = main
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CXX) $(LDFLAGS) $^ -o $@
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJS)
 
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJS) $(TARGET)
-
-.PHONY: all clean
+	rm -f $(OBJS) $(TARGET) temp.txt

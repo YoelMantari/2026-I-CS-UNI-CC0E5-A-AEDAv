@@ -1,10 +1,17 @@
-#include "containers/vector.h"
-#include "containers/linkedlist.h"
-// g++ -std=c++2b main.cpp containers/vector.cpp -o main
-void ListsDemo();
-int main(){
-    // DemoVector();
-    //DemoConcurrentVector();
-    ListsDemo();
+#include <iostream>
+#include "containers/demos.h"
+
+using namespace std;
+
+int main() {
+    cout << "Iniciando bateria de pruebas de los tres Arboles (CRTP)...\n\n";
+    
+    DemoBinaryTree();
+    TestAdicionalesBST();
+    cout << "\n";
+    DemoAVL();
+    DemoRBT();
+
+    cout << "Todas las pruebas finalizaron con exito." << endl;
     return 0;
 }
