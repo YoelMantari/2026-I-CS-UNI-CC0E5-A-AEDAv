@@ -18,7 +18,7 @@ struct BinaryTreeNode{
 // Utilizar:
 //    AscendingTrait<BinaryTreeNode<T>> o 
 //    DescendingTrait<BinaryTreeNode<T>>
-
+// uti
 template<typename Trait>
 class BinaryTree{
     using value_type = typename Trait::value_type;
