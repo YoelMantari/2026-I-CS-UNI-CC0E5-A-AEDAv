@@ -1,19 +1,20 @@
 #ifndef __TRAITS_H__
 #define __TRAITS_H__
-#include <functional> // para less y greater
 
-template <typename _Node, typename _Comp>
+#include <functional>
+
+template <typename T, typename _Comp = std::less<T>>
 struct BaseTrait{
-    using Node       = _Node;
-    using value_type = typename _Node::value_type;
+    using value_type = T;
     using Comp       = _Comp;
 };
 
-template <typename _Node>
-struct AscendingTrait : public BaseTrait<_Node, less<typename _Node::value_type>>{
+template <typename T>
+struct AscendingTrait : public BaseTrait<T, std::less<T>>{
 };
-template <typename _Node>
-struct DescendingTrait : public BaseTrait<_Node, greater<typename _Node::value_type>>{
+
+template <typename T>
+struct DescendingTrait : public BaseTrait<T, std::greater<T>>{
 };
 
 #endif // __TRAITS_H__
