@@ -56,7 +56,7 @@ public:
 
     void insert(value_type value, Ref ref);
     
-    // Extrae el elemento de mayor o menor prioridad (depende del heap)
+    // Extrae el elemento de mayor o menor prioridad (depende del hea)
     void extract(); 
     
     // Obtiene el elemento de mayor o menor prioridad (depende del heap) 
