@@ -293,15 +293,29 @@ public:
     }
 
     // insertar base
-    virtual void insert(value_type data) {
-        std::unique_lock<std::shared_mutex> lock(m_mtx);
+protected:
+    // Core de insercion reutilizable por as clases derivadas (AVL y RB)
+    virtual Node* insert_node(value_type data, bool& inserted) {
         Node** pNode = &m_pRoot;
         while (*pNode != nullptr) {
+            if ((*pNode)->m_data == data) {
+                inserted = false;
+                return *pNode;
+            }
             auto branch = !m_comp((*pNode)->m_data, data);
             pNode = &((*pNode)->m_pChild[branch]);
         }
         *pNode = new Node(data);
         m_size++;
+        inserted = true;
+        return *pNode;
+    }
+
+public:
+    virtual void insert(value_type data) {
+        std::unique_lock<std::shared_mutex> lock(m_mtx);
+        bool inserted = false;
+        insert_node(data, inserted);
     }
 
     //remove base
@@ -375,21 +389,18 @@ public:
 
     // 9. operator>> em formato [v1,v2 ...]
     friend decltype(auto) operator>>(istream& is, BinaryTree& tree) {
-        std::unique_lock<std::shared_mutex> lock(tree.m_mtx);
-        tree.destroy(tree.m_pRoot);
-        tree.m_pRoot = nullptr;
-        tree.m_size = 0;
+        {
+            std::unique_lock<std::shared_mutex> lock(tree.m_mtx);
+            tree.destroy(tree.m_pRoot);
+            tree.m_pRoot = nullptr;
+            tree.m_size = 0;
+        }
+        
         char c;
         if (is >> c && c == '[') {
             value_type val;
             while (is >> val) {
-                Node** pNode = &tree.m_pRoot;
-                while (*pNode != nullptr) {
-                    bool branch = !tree.m_comp((*pNode)->m_data, val);
-                    pNode = &((*pNode)->m_pChild[branch]);
-                }
-                *pNode = new Node(val);
-                tree.m_size++;
+                tree.insert(val); // Reutilizamos insert virtual!!
                 is >> c; // read ',' or ']'
                 if (c == ']') break;
             }

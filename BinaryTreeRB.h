@@ -101,41 +101,30 @@ public:
 
     void insert(value_type data) override {
         std::unique_lock<std::shared_mutex> lock(this->m_mtx);
-        Node* node = new Node(data);
-        Node* y = nullptr;
-        Node* x = this->m_pRoot;
-
-        while (x != nullptr) {
-            y = x;
-            if (node->m_data == x->m_data) {
-                delete node; // evitar duplicados
-                return;
-            }
-            bool branch = !this->m_comp(x->m_data, data);
-            x = x->m_pChild[branch];
+        bool inserted = false;
+        Node* node = this->insert_node(data, inserted);
+        if (!inserted) return; // evitar duplicados
+        
+        // El node ahora necesita estar enlazado a su padre correctamente y ajustado
+        Node* curr = this->m_pRoot;
+        Node* parent = nullptr;
+        while (curr != node) {
+            parent = curr;
+            bool branch = !this->m_comp(curr->m_data, data);
+            curr = curr->m_pChild[branch];
         }
-
-        node->m_pParent = y;
-        if (y == nullptr) {
-            this->m_pRoot = node;
-        } else {
-            bool branch = !this->m_comp(y->m_data, data);
-            y->m_pChild[branch] = node;
-        }
+        node->m_pParent = parent;
 
         if (node->m_pParent == nullptr) {
             node->m_color = BLACK;
-            this->m_size++;
             return;
         }
 
         if (node->m_pParent->m_pParent == nullptr) {
-            this->m_size++;
             return;
         }
 
         fix_insert(node);
-        this->m_size++;
     }
 };
 

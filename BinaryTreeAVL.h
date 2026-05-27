@@ -59,64 +59,66 @@ private:
         return x;
     }
 
-    Node* avl_insert(Node* node, value_type data, bool& inserted) {
-        if (!node) {
-            inserted = true;
-            return new Node(data);
-        }
-
-        if (node->m_data == data) {
-            inserted = false;
-            return node;
-        }
-
-        // Determinar rama usando la misma convención del BinaryTree
-        bool branch = !this->m_comp(node->m_data, data);
-        node->m_pChild[branch] = avl_insert(node->m_pChild[branch], data, inserted);
-
-        update_height(node);
-        int bf = balance_factor(node);
-
-        // Desbalance en rama izquierda (pChild[0])
-        if (bf > 1) {
-            bool child_branch = !this->m_comp(node->m_pChild[0]->m_data, data);
-            if (child_branch == 0) {
-                // Caso LL (Left-Left)
-                return rotate_right(node);
-            } else {
-                // Caso LR (Left-Right)
-                node->m_pChild[0] = rotate_left(node->m_pChild[0]);
-                return rotate_right(node);
-            }
-        }
-        
-        // Desbalance en rama derecha (pChild[1])
-        if (bf < -1) {
-            bool child_branch = !this->m_comp(node->m_pChild[1]->m_data, data);
-            if (child_branch == 1) {
-                // Caso RR (Right-Right)
-                return rotate_left(node);
-            } else {
-                // Caso RL (Right-Left)
-                node->m_pChild[1] = rotate_right(node->m_pChild[1]);
-                return rotate_left(node);
-            }
-        }
-
-        return node;
-    }
-
 public:
-    // Configura el constructor llamando al base
     BinaryTreeAVL() : BinaryTree<Trait>() {}
 
-    // Sobreescritura polimórfica (override) de la inserción
+    // Sobreescritura polimórfica (override) de la inserción, reutilizando el base insert
     void insert(value_type data) override {
         std::unique_lock<std::shared_mutex> lock(this->m_mtx);
+        
         bool inserted = false;
-        this->m_pRoot = avl_insert(this->m_pRoot, data, inserted);
-        if (inserted) {
-            this->m_size++;
+        Node* node = this->insert_node(data, inserted);
+        if (!inserted) return; 
+
+        // Ahora tenemos que re-balancear trazando la ruta desde la raíz
+        std::vector<Node*> path;
+        Node* curr = this->m_pRoot;
+        while (curr != node) {
+            path.push_back(curr);
+            bool branch = !this->m_comp(curr->m_data, data);
+            curr = curr->m_pChild[branch];
+        }
+        path.push_back(node);
+
+        // Actualizar alturas y balancear de abajo hacia arriba iterativamente
+        for (int i = (int)path.size() - 1; i >= 0; i--) {
+            Node* current = path[i];
+            update_height(current);
+            int bf = balance_factor(current);
+
+            Node* new_subtree = current;
+
+            // Desbalance en rama izquierda (pChild[0])
+            if (bf > 1) {
+                bool child_branch = !this->m_comp(current->m_pChild[0]->m_data, data);
+                if (child_branch == 0) {
+                    new_subtree = rotate_right(current);
+                } else {
+                    current->m_pChild[0] = rotate_left(current->m_pChild[0]);
+                    new_subtree = rotate_right(current);
+                }
+            }
+            // Desbalance en rama derecha (pChild[1])
+            else if (bf < -1) {
+                bool child_branch = !this->m_comp(current->m_pChild[1]->m_data, data);
+                if (child_branch == 1) {
+                    new_subtree = rotate_left(current);
+                } else {
+                    current->m_pChild[1] = rotate_right(current->m_pChild[1]);
+                    new_subtree = rotate_left(current);
+                }
+            }
+
+            // reconectar si hubo rotacion
+            if (new_subtree != current) {
+                if (i == 0) {
+                    this->m_pRoot = new_subtree;
+                } else {
+                    Node* parent = path[i-1];
+                    bool parent_branch = (parent->m_pChild[1] == current);
+                    parent->m_pChild[parent_branch] = new_subtree;
+                }
+            }
         }
     }
 };
