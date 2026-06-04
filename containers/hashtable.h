@@ -51,7 +51,7 @@ struct HashEntry {
         return os << entry.key << ":" << entry.value;
     }
 };
-
+//hashnode
 template <typename Key, typename Value>
 struct HashNode : public BinaryTreeNodeBase<HashNode<Key, Value>, HashEntry<Key, Value>> {
     using Base = BinaryTreeNodeBase<HashNode<Key, Value>, HashEntry<Key, Value>>;
