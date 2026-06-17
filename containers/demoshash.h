@@ -22,13 +22,13 @@ vector<string> getHashTestData<string>() {
 
 template <typename T>
 void DemoHashTable() {
-    cout << "=== Probar HashTable con tipo llave: " << typeid(T).name() << " ===" << endl;
-    HashTable<T, int> table;
+    cout << "=== Probar HashTable" << typeid(T).name() << " ===" << endl;
+    HashTable<HashTrait<T, Ref>> table;
 
-    int value = 10;
+    Ref ref = 10;
     for (const auto& key : getHashTestData<T>()) {
-        table.insert(key, value);
-        value += 10;
+        table[key] = ref;
+        ref += 10;
     }
 
     auto firstKey = getHashTestData<T>().front();
@@ -37,16 +37,15 @@ void DemoHashTable() {
     cout << "HashTable: " << table << endl;
     cout << "Size: " << table.size() << endl;
     cout << "Contiene primera llave: " << (table.contains(firstKey) ? "si" : "no") << endl;
-    cout << "Valor primera llave: " << table.search(firstKey) << endl;
+    cout << "Ref primera llave: " << table.at(firstKey) << endl;
 
     cout << "Iteracion: ";
-    for (auto pair : table) {
-        cout << pair.key << ":" << pair.value << " ";
+    for (auto item : table) {
+        auto [key, ref] = item;
+        cout << key << ":" << ref << " ";
     }
     cout << "\n";
 
-    table.remove(firstKey);
-    cout << "Luego de borrar primera llave: " << table << endl;
     cout << "Size final: " << table.size() << "\n\n";
 }
 

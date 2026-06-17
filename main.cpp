@@ -1,4 +1,4 @@
-#include "containers/demo.h"
+//#include "containers/demo.h"
 #include "containers/demoshash.h"
 
 int main(){
@@ -6,7 +6,7 @@ int main(){
     DemoHashTable<double>();
     DemoHashTable<string>();
 
-    HeapDemo();
+    //HeapDemo();
 
     return 0;
 }

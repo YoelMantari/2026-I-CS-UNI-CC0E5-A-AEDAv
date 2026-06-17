@@ -2,6 +2,7 @@
 #define __BINARYTREEAVL_H__
 
 #include "BinaryTree.h"
+#include "types.h"
 #include <algorithm>
 #include <cstddef>
 
@@ -9,8 +10,16 @@
 template <typename T>
 class AVLNode : public BinaryTreeNodeBase<AVLNode<T>, T> {
 public:
+    Ref m_ref;
     std::size_t m_height;
-    AVLNode(T data) : BinaryTreeNodeBase<AVLNode<T>, T>(data), m_height(1) {}
+
+    AVLNode() : BinaryTreeNodeBase<AVLNode<T>, T>(T{}), m_ref(Ref{}), m_height(1) {}
+    explicit AVLNode(T data, Ref ref = Ref{})
+        : BinaryTreeNodeBase<AVLNode<T>, T>(data), m_ref(ref), m_height(1) {}
+
+    Ref& getRef() { return m_ref; }
+    const Ref& getRef() const { return m_ref; }
+    void setRef(Ref ref) { m_ref = ref; }
 };
 
 template <typename Trait>
@@ -112,6 +121,7 @@ private:
 
             Node* succ = min_value_node(node->m_pChild[1]);
             node->m_data = succ->m_data;
+            node->setRef(succ->getRef());
 
             bool dummy = false;
             node->m_pChild[1] =
@@ -124,7 +134,7 @@ private:
 protected:
     Node* copyTree(Node* node) override {
         if (!node) return nullptr;
-        Node* newNode = new Node(node->m_data);
+        Node* newNode = new Node(node->m_data, node->getRef());
         newNode->m_pChild[0] = copyTree(node->m_pChild[0]);
         newNode->m_pChild[1] = copyTree(node->m_pChild[1]);
         update_height(newNode);
