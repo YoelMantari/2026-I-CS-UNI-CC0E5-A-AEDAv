@@ -1,113 +1,89 @@
-//#include <iostream.h>
-#include <time.h>
-#include <stdlib.h>
-#include <string>
+#include <iostream>
+
 #include "BTree.h"
 
-//const char * keys="CDAMPIWNBKEHOLJYQZFXVRTSGU";
 const char * keys1 = "D1XJ2xTg8zKL9AhijOPQcEowRSp0NbW567BUfCqrs4FdtYZakHIuvGV3eMylmn";
 const char * keys2 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-const char * keys3 = "DYZakHIUwxVJ203ejOP9Qc8AdtuEop1XvTRghSNbW567BfiCqrs4FGMyzKLlmn";
 
-const int BTreeSize = 3;
-void main(int argc, char * argv[], char * envp[])
+const std::size_t BTreeSize = 3;
+
+template <typename Tree>
+void InsertKeys(Tree& tree, const typename Tree::value_type* keys)
 {
-       int result, i;
-       BTree <char> bt (BTreeSize);
-       for (i = 0; keys1[i]; i++)
-       {
-               //cout<<"Inserting "<<keys1[i]<<endl;
-               result = bt.Insert(keys1[i], i*i);
-               //bt.Print(cout);
-       }
-       bt.Print(cout);
-       /*for (i = 0; keys2[i]; i++)
-       {
-               cout << "Searching " << keys2[i] << " ";
-               long ObjID = bt.Search(keys2[i]);
-               if( ObjID != -1 )
-                       cout << "Achei " << keys2[i] << " ID = " << ObjID << endl;
-               else
-                       cout <<"Nao achei!" << keys2[i] << endl;
-       }*/
-       /*cout.flush();
+       using ref_type = typename Tree::ref_type;
 
-       for (i = 0; keys3[i]; i++)
+       for (std::size_t i = 0; keys[i]; i++)
        {
-               cout << "Removing " << keys3[i] << " ";
-               if( bt.Remove(keys3[i], -1) )
-                       cout << keys3[i] << " removido !" << endl;
-               else
-                       cout <<"Nao achei!" << keys3[i] << endl;
-               bt.Print(cout);
+              tree.Insert(keys[i], static_cast<ref_type>(i * i));
        }
-       bt.Print(cout);
-       cout.flush();*/
-       return 1;
 }
 
-
-
-
-
-
-
-
-
-/*const char * keys="CDAMPIWNBKEHOLJYQZFXVRTSGU";
-const char * keys2="CDAMPIWNBKEHOLJYQZFXVRTSGU";
-const int BTreeSize = 3;
-main (int argc, char * argv)
+template <typename Tree>
+void PrintSearchResults(Tree& tree, const typename Tree::value_type* keys, std::ostream& os)
 {
-       //__int64 li;
-       BTree <__int64> bt (BTreeSize);
-       for (register int i = 0; i < 1000000; i++)
+       for (std::size_t i = 0; keys[i]; i++)
        {
-               //cout<<"Inserting "<<keys[i]<<endl;
-               bt.Insert(i, i-1);
-               //bt.Print(cout);
+              typename Tree::ref_type ref = tree.Search(keys[i]);
+              if( ref != typename Tree::ref_type(-1) )
+                     os << "Encontrado " << keys[i] << " ref = " << ref << '\n';
+              else
+                     os << "No encontrado " << keys[i] << '\n';
        }
+}
 
-       for (i = 0; i < 1000; i++)
-       {
-               __int64 key = 975000+(::rand()%50000);
-               //cout << "Searching " << (long)key << " ";
-               long ObjID = bt.Search(key);
-               if( ObjID != -1 )
-                       cout << "Achei " << (long)key << " ID = " << ObjID << endl;
-               else
-                       cout <<"  Nao achei!" << (long)key << endl;
-       }
-       cout.flush();
-
-       return 1;
-}*/
-
-
-
-/*const int BTreeSize = 3;
-main (int argc, char * argv)
+template <typename Tree>
+void PrintWithForEach(Tree& tree, std::ostream& os)
 {
-       int result, i;
-       BTree <LONGLONG> bt(BTreeSize);
-       result = bt.Create ("ernesto3-string-btree-start.dat",ios::in|ios::out);
-       if (!result) { cout<<"Please delete testbt.dat"<<endl;return 0; }
-       srand( (unsigned)time( NULL ) );
-       LARGE_INTEGER key;
-       for (i = 0; i < 1000000; i++)
-       {
-               //cout<<"Inserting "<<keys[i]<<endl;
-               char strTmp[50];
-               key.LowPart = rand();
-               key.HighPart = rand();
-               std::string str(strTmp);
-               result = bt.Insert(key.QuadPart, i);
-               //bt.Print(cout);
-               if( i % 100000 == 0 )
-               {       cout << i << endl; cout.flush();        }
-       }
-       //cout << "Searching D " << bt.Search();
-       //bt.Search(1,1);
-       cout.flush();
-       return 1;
-}*/
+       tree.ForEach(
+              [](const auto& node, std::size_t level, std::ostream& out)
+              {
+                     out << "nivel " << level << ": "
+                         << node.key << "->" << node.ref << '\n';
+              },
+              os);
+}
+
+template <typename Tree>
+void PrintFirstThat(Tree& tree, const typename Tree::value_type& key, std::ostream& os)
+{
+       auto* found = tree.FirstThat(
+              [](const auto& node, std::size_t, const typename Tree::value_type& keyToFind)
+              {
+                     return node.key == keyToFind;
+              },
+              key);
+
+       if( found )
+              os << "\nFirstThat encontro: " << found->key << "->" << found->ref << '\n';
+       else
+              os << "\nFirstThat no encontro la clave buscada\n";
+}
+
+template <typename Traits>
+void Demo(const typename Traits::value_type* insertKeys,
+          const typename Traits::value_type* searchKeys,
+          const typename Traits::value_type& firstThatKey,
+          std::ostream& os)
+{
+       BTree<Traits> tree(BTreeSize);
+
+       InsertKeys(tree, insertKeys);
+
+       os << "B-Tree despues de insertar claves:\n";
+       tree.Print(os);
+
+       os << "\nBusquedas:\n";
+       PrintSearchResults(tree, searchKeys, os);
+
+       os << "\nRecorrido directo con ForEach:\n";
+       PrintWithForEach(tree, os);
+
+       PrintFirstThat(tree, firstThatKey, os);
+}
+
+void BTreeDemo()
+{
+       using DemoTraits = BTreeTraits<char, long>;
+
+       Demo<DemoTraits>(keys1, keys2, 'Q', std::cout);
+}

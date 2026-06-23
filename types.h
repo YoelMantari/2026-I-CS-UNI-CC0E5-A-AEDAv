@@ -13,5 +13,7 @@ using Type = int;
 using T1 = int;
 
 using Ref = long;
+using Bool = bool;
 
 #endif // __TYPES_H__
+
