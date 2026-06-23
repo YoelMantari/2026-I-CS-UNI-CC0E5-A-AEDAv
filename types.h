@@ -1,6 +1,8 @@
 #ifndef __TYPES_H__
 #define __TYPES_H__
 
+#include <cstddef>
+
 // C/C++
 // typedef int Type;
 
@@ -14,6 +16,12 @@ using T1 = int;
 
 using Ref = long;
 using Bool = bool;
+using Size = std::size_t;
+
+using BTreeKey = char;
+using BTreeRef = Ref;
+using BTreeText = const BTreeKey*;
+using BTreeOrder = Size;
+using BTreeLevel = Size;
 
 #endif // __TYPES_H__
-
