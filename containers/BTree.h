@@ -3,12 +3,19 @@
 #ifndef BTREE_H
 #define BTREE_H
 
+#include <algorithm>
 #include <cstddef>
 #include <iostream>
+#include <iterator>
+#include <memory>
+#include <mutex>
+#include <shared_mutex>
 #include <utility>
+#include <vector>
 
 #include "../types.h"
 #include "BTreePage.h"
+#include "general_iterator.h"
 
 #define DEFAULT_BTREE_ORDER 3
 
@@ -22,6 +29,75 @@ public:
        using node_type  = typename Traits::node_type;
        using page_type  = CBTreePage<Traits>;
        using ObjectInfo = node_type;
+
+       class ForwardIterator : public general_iterator<node_type>
+       {
+       public:
+              using Base = general_iterator<node_type>;
+
+              using iterator_category = std::forward_iterator_tag;
+              using value_type = typename Base::value_type;
+              using difference_type = typename Base::difference_type;
+              using pointer = typename Base::pointer;
+              using reference = typename Base::reference;
+
+              ForwardIterator() = default;
+
+              ForwardIterator(std::shared_ptr<std::vector<node_type>> data, Size pos)
+                     : Base(std::move(data), pos)
+              {
+              }
+
+              ForwardIterator& operator++()
+              {
+                     this->Advance();
+                     return *this;
+              }
+
+              ForwardIterator operator++(int)
+              {
+                     ForwardIterator tmp = *this;
+                     ++(*this);
+                     return tmp;
+              }
+       };
+
+       class BackwardIterator : public general_iterator<node_type>
+       {
+       public:
+              using Base = general_iterator<node_type>;
+
+              using iterator_category = std::forward_iterator_tag;
+              using value_type = typename Base::value_type;
+              using difference_type = typename Base::difference_type;
+              using pointer = typename Base::pointer;
+              using reference = typename Base::reference;
+
+              BackwardIterator() = default;
+
+              BackwardIterator(std::shared_ptr<std::vector<node_type>> data, Size pos)
+                     : Base(std::move(data), pos)
+              {
+              }
+
+              BackwardIterator& operator++()
+              {
+                     this->Advance();
+                     return *this;
+              }
+
+              BackwardIterator operator++(int)
+              {
+                     BackwardIterator tmp = *this;
+                     ++(*this);
+                     return tmp;
+              }
+       };
+
+       using iterator = ForwardIterator;
+       using const_iterator = ForwardIterator;
+       using reverse_iterator = BackwardIterator;
+       using const_reverse_iterator = BackwardIterator;
 
 public:
        BTree(std::size_t order = DEFAULT_BTREE_ORDER, Bool unique = true);
@@ -41,13 +117,53 @@ public:
        template <typename Func, typename... Args>
        void ForEach(Func&& func, Args&&... args)
        {
+              std::shared_lock<std::shared_mutex> lock(m_mtx);
               m_Root.ForEach(std::forward<Func>(func), 0, std::forward<Args>(args)...);
        }
 
        template <typename Predicate, typename... Args>
        node_type* FirstThat(Predicate&& pred, Args&&... args)
        {
+              std::shared_lock<std::shared_mutex> lock(m_mtx);
               return m_Root.FirstThat(std::forward<Predicate>(pred), 0, std::forward<Args>(args)...);
+       }
+
+       iterator begin()
+       {
+              auto snapshot = std::make_shared<std::vector<node_type>>();
+
+              ForEach(
+                     [snapshot](const node_type& node, BTreeLevel) -> void
+                     {
+                            snapshot->push_back(node);
+                     });
+
+              return iterator(snapshot, Size{});
+       }
+
+       iterator end()
+       {
+              return iterator{};
+       }
+
+       reverse_iterator rbegin()
+       {
+              auto snapshot = std::make_shared<std::vector<node_type>>();
+
+              ForEach(
+                     [snapshot](const node_type& node, BTreeLevel) -> void
+                     {
+                            snapshot->push_back(node);
+                     });
+
+              std::reverse(snapshot->begin(), snapshot->end());
+
+              return reverse_iterator(snapshot, Size{});
+       }
+
+       reverse_iterator rend()
+       {
+              return reverse_iterator{};
        }
 
 protected:
@@ -56,6 +172,7 @@ protected:
        std::size_t     m_Order;   // order of tree
        std::size_t     m_NumKeys; // number of keys
        Bool            m_Unique;  // Accept the elements only once ?
+       mutable std::shared_mutex m_mtx;
 };
 
 template <typename Traits>
@@ -77,6 +194,7 @@ BTree<Traits>::~BTree()
 template <typename Traits>
 Bool BTree<Traits>::Insert(const value_type& key, const ref_type& ref)
 {
+       std::unique_lock<std::shared_mutex> lock(m_mtx);
        bt_ErrorCode error = m_Root.Insert(key, ref);
        if( error == bt_duplicate )
                return false;
@@ -92,6 +210,7 @@ Bool BTree<Traits>::Insert(const value_type& key, const ref_type& ref)
 template <typename Traits>
 Bool BTree<Traits>::Remove (const value_type& key, const ref_type& ref)
 {
+       std::unique_lock<std::shared_mutex> lock(m_mtx);
        bt_ErrorCode error = m_Root.Remove(key, ref);
        if( error == bt_nofound )
                return false;
@@ -105,6 +224,7 @@ Bool BTree<Traits>::Remove (const value_type& key, const ref_type& ref)
 template <typename Traits>
 typename BTree<Traits>::ref_type BTree<Traits>::Search (const value_type& key)
 {
+       std::unique_lock<std::shared_mutex> lock(m_mtx);
        ref_type ref = ref_type(-1);
        m_Root.Search(key, ref);
        return ref;
@@ -113,6 +233,7 @@ typename BTree<Traits>::ref_type BTree<Traits>::Search (const value_type& key)
 template <typename Traits>
 void BTree<Traits>::Print(std::ostream &os)
 {
+       std::shared_lock<std::shared_mutex> lock(m_mtx);
        m_Root.Print(os);
 }
 
@@ -121,6 +242,31 @@ std::ostream& operator<<(std::ostream& os, BTree<Traits>& tree)
 {
        tree.Print(os);
        return os;
+}
+
+template <typename Traits>
+std::istream& operator>>(std::istream& is, BTree<Traits>& tree)
+{
+       using node_type = typename BTree<Traits>::node_type;
+
+       while (true)
+       {
+              node_type node{};
+
+              if (!(is >> node))
+              {
+                     if (is.eof())
+                     {
+                            is.clear();
+                     }
+
+                     break;
+              }
+
+              tree.Insert(node.key, node.ref);
+       }
+
+       return is;
 }
 
 #endif

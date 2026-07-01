@@ -1,4 +1,4 @@
-//CBTreePage.h
+//BTreePage.h
 
 /*************************
 #ifndef BTPage_H
@@ -9,6 +9,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <iostream>
 #include <utility>
 #include <vector>
@@ -31,6 +32,7 @@ public:
        using value_type = typename Traits::value_type;
        using ref_type = typename Traits::ref_type;
        using node_type = typename Traits::node_type;
+       using compare_type = typename Traits::compare_type;
        using page_type = CBTreePage<Traits>;
        using ObjectInfo = node_type;
 
@@ -45,14 +47,13 @@ public:
        template <typename Func, typename... Args>
        void ForEach(Func&& func, std::size_t level, Args&&... args)
        {
-              for( std::size_t i = 0 ; i < m_KeyCount ; i++)
-              {
-                     if( m_SubPages[i] )
-                            m_SubPages[i]->ForEach(std::forward<Func>(func), level+1, std::forward<Args>(args)...);
-                     func(m_Keys[i], level, std::forward<Args>(args)...);
-              }
-              if( m_SubPages[m_KeyCount] )
-                     m_SubPages[m_KeyCount]->ForEach(std::forward<Func>(func), level+1, std::forward<Args>(args)...);
+              FirstThat(
+                     [&](node_type& info, std::size_t currentLevel) -> Bool
+                     {
+                            std::invoke(func, info, currentLevel, args...);
+                            return false;
+                     },
+                     level);
        }
 
        template <typename Predicate, typename... Args>
@@ -69,7 +70,7 @@ public:
                             if( pTmp )
                                    return pTmp;
                      }
-                     if( pred(m_Keys[i], level, std::forward<Args>(args)...) )
+                     if( std::invoke(pred, m_Keys[i], level, std::forward<Args>(args)...) )
                             return &m_Keys[i];
               }
               if( m_SubPages[m_KeyCount] )
@@ -144,22 +145,24 @@ private:
 
 // Si no lo encuentra, deberia decirme:
 // cual es la posicion donde deberia estar
-template <typename Container, typename ObjType>
-std::size_t binary_search(Container& container, std::size_t first, std::size_t last, const ObjType &object)
+template <typename Container, typename ObjType, typename Compare>
+std::size_t binary_search(Container& container, std::size_t first, std::size_t last, const ObjType &object, Compare compare)
 {
        if( first >= last )
                return first;
        while( first < last )
        {
                std::size_t mid = (first+last)/2;
-               if( object == static_cast<ObjType>(container[mid]) )
+               ObjType current = static_cast<ObjType>(container[mid]);
+               if( !compare(object, current) && !compare(current, object) )
                        return mid;
-               if( object > static_cast<ObjType>(container[mid]) )
+               if( compare(current, object) )
                        first = mid+1;
                else
                        last  = mid;
        }
-       if( object <= static_cast<ObjType>(container[first]) )
+       ObjType current = static_cast<ObjType>(container[first]);
+       if( !compare(current, object) )
                return first;
        return last;
 }
@@ -198,10 +201,14 @@ CBTreePage<Traits>::~CBTreePage()
 template <typename Traits>
 bt_ErrorCode CBTreePage<Traits>::Insert(const value_type& key, const ref_type& ref)
 {
-       std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key);
+       compare_type compare;
+       std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key, compare);
        bt_ErrorCode error = bt_ok;
 
-       if( pos < m_KeyCount && static_cast<value_type>(m_Keys[pos]) == key && m_Unique)
+       if( pos < m_KeyCount &&
+           !compare(key, m_Keys[pos].key) &&
+           !compare(m_Keys[pos].key, key) &&
+           m_Unique)
                return bt_duplicate; // this key is duplicate
 
        if( !m_SubPages[pos] ) // this is a leave
@@ -497,20 +504,21 @@ Bool CBTreePage<Traits>::SplitRoot()
 template <typename Traits>
 Bool CBTreePage<Traits>::Search(const value_type &key, ref_type &ref)
 {
-       std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key);
+       compare_type compare;
+       std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key, compare);
        if( pos >= m_KeyCount ){
                if( m_SubPages[pos] )
                        return m_SubPages[pos]->Search(key, ref);
                else
                        return false;
        }
-       if( key == m_Keys[pos].key )
+       if( !compare(key, m_Keys[pos].key) && !compare(m_Keys[pos].key, key) )
        {
                ref = m_Keys[pos].ref;
                m_Keys[pos].use_counter++;
                return true;
        }
-       if( key < m_Keys[pos].key )
+       if( compare(key, m_Keys[pos].key) )
                if( m_SubPages[pos] )
                        return m_SubPages[pos]->Search(key, ref);
        return false;
@@ -520,8 +528,11 @@ template <typename Traits>
 bt_ErrorCode CBTreePage<Traits>::Remove(const value_type &key, const ref_type& ref)
 {
        bt_ErrorCode error = bt_ok;
-       std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key);
-       if( pos < NumberOfKeys() && key == m_Keys[pos].key /*&& m_Keys[pos].ref == ref*/) // We found it !
+       compare_type compare;
+       std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key, compare);
+       if( pos < NumberOfKeys() &&
+           !compare(key, m_Keys[pos].key) &&
+           !compare(m_Keys[pos].key, key) /*&& m_Keys[pos].ref == ref*/)
        {
                // This is a leave: First
                if( !m_SubPages[pos+1] )  // This is a leave ? FIRST CASE !
@@ -552,7 +563,7 @@ bt_ErrorCode CBTreePage<Traits>::Remove(const value_type &key, const ref_type& r
                else
                        return bt_nofound;
        }
-       else if( key <= m_Keys[pos].key ){ // = is because identical keys are inserted on left (see Insert)
+       else if( !compare(m_Keys[pos].key, key) ){ // = is because identical keys are inserted on left (see Insert)
                if( m_SubPages[pos] )
                        error = m_SubPages[pos]->Remove(key, ref);
                else
@@ -686,7 +697,7 @@ void CBTreePage<Traits>::Print(std::ostream & os)
               {
                      for( std::size_t i = 0; i < level ; i++)
                             out << "\t";
-                     out << info.key << "->" << info.ref << "\n";
+                     out << info << "\n";
               },
               0,
               os);

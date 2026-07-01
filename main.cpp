@@ -1,6 +1,7 @@
-int RunBTreeDemo();
+void BTreeDemo();
 
 int main()
 {
-    return RunBTreeDemo();
+    BTreeDemo();
+    return 0;
 }

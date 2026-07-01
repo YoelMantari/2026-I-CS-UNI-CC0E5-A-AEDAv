@@ -1,6 +1,7 @@
 //BTreeDemo.cpp
 //#include <iostream.h>
 #include <iostream>
+#include <sstream>
 
 #include "../types.h"
 #include "BTree.h"
@@ -41,7 +42,7 @@ void ShowForEach(Tree& tree, std::ostream& os)
               [](const auto& node, BTreeLevel level, std::ostream& out)
               {
                      out << "nivel " << level << ": "
-                         << node.key << "->" << node.ref << '\n';
+                         << node << '\n';
               },
               os);
 }
@@ -57,9 +58,61 @@ void ShowFirstThat(Tree& tree, BTreeKey key, std::ostream& os)
               key);
 
        if( found )
-              os << "\nFirstThat variadic encontro: " << found->key << "->" << found->ref << '\n';
+              os << "\nFirstThat variadic encontro: " << *found << '\n';
        else
               os << "\nFirstThat variadic no encontro la clave buscada\n";
+}
+
+template <typename Tree>
+void ShowForwardIterator(Tree& tree, std::ostream& os)
+{
+       os << "\nRecorrido con ForwardIterator:\n";
+
+       for (auto it = tree.begin(); it != tree.end(); ++it)
+       {
+              os << *it << '\n';
+       }
+}
+
+template <typename Tree>
+void ShowBackwardIterator(Tree& tree, std::ostream& os)
+{
+       os << "\nRecorrido con BackwardIterator:\n";
+
+       for (auto it = tree.rbegin(); it != tree.rend(); ++it)
+       {
+              os << *it << '\n';
+       }
+}
+
+void ShowNodeStreamOperators(std::ostream& os)
+{
+       os << "\nPrueba operator>> y operator<< en BTreeNode:\n";
+
+       using node_type = BTreeNode<BTreeKey, BTreeRef>;
+
+       std::istringstream input("(Q,361)");
+       node_type node{};
+
+       input >> node;
+
+       if (input)
+              os << "Nodo leido: " << node << '\n';
+       else
+              os << "Error al leer nodo\n";
+}
+
+template <typename Traits>
+void ShowTreeInputOperator(std::ostream& os)
+{
+       os << "\nPrueba operator>> en BTree:\n";
+
+       BTree<Traits> tree(BTreeSize);
+
+       std::istringstream input("(A,0) (B,4) (C,9)");
+       input >> tree;
+
+       os << tree;
 }
 
 template <typename Traits>
@@ -70,13 +123,17 @@ void Demo(BTreeText insertKeys, BTreeText searchKeys, BTreeKey firstThatKey, std
        InsertKeys(tree, insertKeys);
 
        os << "B-Tree despues de insertar claves:\n";
-       tree.Print(os);
+       os << tree;
 
        os << "\nBusquedas:\n";
        SearchKeys(tree, searchKeys, os);
 
        ShowForEach(tree, os);
        ShowFirstThat(tree, firstThatKey, os);
+       ShowForwardIterator(tree, os);
+       ShowBackwardIterator(tree, os);
+       ShowTreeInputOperator<Traits>(os);
+       ShowNodeStreamOperators(os);
 }
 
 /*const char * keys="CDAMPIWNBKEHOLJYQZFXVRTSGU";

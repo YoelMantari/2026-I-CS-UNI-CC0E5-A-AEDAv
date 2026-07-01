@@ -1,37 +1,71 @@
+// general_iterator.h
 #ifndef __ITERATOR_H__
 #define __ITERATOR_H__
-#include <algorithm>
-#include <utility>
 
-template <typename Container, class IteratorBase> // 
+#include <iterator>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "../types.h"
+
+template <typename Node>
 class general_iterator
-{public:
-    using Node = typename Container::Node;
-    using myself = general_iterator<Container, IteratorBase>;
-    
-protected:
-    Container *m_pContainer;
-    Node      *m_pNode;
+{
 public:
-    general_iterator(Container *pContainer, Node *pNode)
-        : m_pContainer(pContainer), m_pNode(pNode) {}
-    general_iterator(myself &other) 
-          : m_pContainer(other.m_pContainer), m_pNode(other.m_pNode){}
-    general_iterator(myself &&other) // Move constructor
-          {   m_pContainer = move(other.m_pContainer);
-              m_pNode      = move(other.m_pNode);
-          }
-    IteratorBase operator=(IteratorBase &iter)
-          {   m_pContainer = move(iter.m_pContainer);
-              m_pNode      = move(iter.m_pNode);
-              return *(IteratorBase *)this; // Pending static_cast?
-          }
-    Node *getNode() const { return m_pNode; }
-    friend bool operator==(const IteratorBase &a, const IteratorBase &b) { return a.getNode() == b.getNode(); }
-    typename Container::value_type &operator*(){
-        return m_pNode->getDataRef();
+    using node_type = Node;
+    using container_type = std::vector<node_type>;
+
+    using value_type = node_type;
+    using difference_type = std::ptrdiff_t;
+    using pointer = const node_type*;
+    using reference = const node_type&;
+
+    general_iterator() = default;
+
+    general_iterator(std::shared_ptr<container_type> data, Size pos)
+        : m_Data(std::move(data)), m_Pos(pos)
+    {
     }
+
+    reference operator*() const
+    {
+        return (*m_Data)[m_Pos];
+    }
+
+    pointer operator->() const
+    {
+        return &(*m_Data)[m_Pos];
+    }
+
+    Bool operator==(const general_iterator& other) const
+    {
+        if (IsEnd() && other.IsEnd())
+        {
+            return true;
+        }
+
+        return m_Data == other.m_Data && m_Pos == other.m_Pos;
+    }
+
+    Bool operator!=(const general_iterator& other) const
+    {
+        return !(*this == other);
+    }
+
+protected:
+    Bool IsEnd() const
+    {
+        return !m_Data || m_Pos >= m_Data->size();
+    }
+
+    void Advance()
+    {
+        ++m_Pos;
+    }
+
+    std::shared_ptr<container_type> m_Data{};
+    Size m_Pos{};
 };
 
 #endif
- 
