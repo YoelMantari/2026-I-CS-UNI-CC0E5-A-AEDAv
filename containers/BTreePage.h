@@ -11,6 +11,8 @@
 #include <cstddef>
 #include <functional>
 #include <iostream>
+#include <mutex>
+#include <shared_mutex>
 #include <utility>
 #include <vector>
 
@@ -59,6 +61,7 @@ public:
        template <typename Predicate, typename... Args>
        node_type* FirstThat(Predicate&& pred, std::size_t level, Args&&... args)
        {
+              std::shared_lock<std::shared_mutex> lock(m_mtx);
               for( std::size_t i = 0 ; i < m_KeyCount ; i++)
               {
                      if( m_SubPages[i] )
@@ -94,6 +97,7 @@ protected:
        std::vector<ObjectInfo> m_Keys;
        std::vector<page_type *>   m_SubPages;
        std::size_t  m_KeyCount;
+       mutable std::shared_mutex m_mtx;
        void  Create();
        void  Reset ();
        void  Destroy () {   Reset(); delete this;}
@@ -201,40 +205,49 @@ CBTreePage<Traits>::~CBTreePage()
 template <typename Traits>
 bt_ErrorCode CBTreePage<Traits>::Insert(const value_type& key, const ref_type& ref)
 {
-       compare_type compare;
-       std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key, compare);
        bt_ErrorCode error = bt_ok;
+       compare_type compare;
+       std::size_t pos = 0;
+       page_type *pChild = nullptr;
 
-       if( pos < m_KeyCount &&
-           !compare(key, m_Keys[pos].key) &&
-           !compare(m_Keys[pos].key, key) &&
-           m_Unique)
-               return bt_duplicate; // this key is duplicate
+       {
+               std::unique_lock<std::shared_mutex> lock(m_mtx);
+               pos = binary_search(m_Keys, 0, m_KeyCount, key, compare);
 
-       if( !m_SubPages[pos] ) // this is a leave
-       {
-               ::insert_at(m_Keys, ObjectInfo(key, ref), pos);
-               NumberOfKeys()++;
-               if( Overflow() )
-                       return bt_overflow;
-               return bt_ok;
-       }
-       else
-       {
-               // recursive insertion
-               error = m_SubPages[pos]->Insert(key, ref);
-               if( error == bt_overflow )
+               if( pos < m_KeyCount &&
+                   !compare(key, m_Keys[pos].key) &&
+                   !compare(m_Keys[pos].key, key) &&
+                   m_Unique)
+                       return bt_duplicate; // this key is duplicate
+
+               if( !m_SubPages[pos] ) // this is a leave
                {
-                       if( !Redistribute1(pos) )
-                               SplitChild(pos);
-                       if( Overflow() )          // Propagate overflow
+                       ::insert_at(m_Keys, ObjectInfo(key, ref), pos);
+                       NumberOfKeys()++;
+                       if( Overflow() )
                                return bt_overflow;
                        return bt_ok;
                }
+
+               pChild = m_SubPages[pos];
+       }
+
+       // recursive insertion
+       error = pChild->Insert(key, ref);
+       if( error == bt_overflow )
+       {
+               std::unique_lock<std::shared_mutex> lock(m_mtx);
+               pos = binary_search(m_Keys, 0, m_KeyCount, key, compare);
+               if( !Redistribute1(pos) )
+                       SplitChild(pos);
+               if( Overflow() )          // Propagate overflow
+                       return bt_overflow;
+               return bt_ok;
        }
 
        // Nunca va a entrar a este If porque esta situacion
        // debe haber sido tratada en el if anterior
+       std::unique_lock<std::shared_mutex> lock(m_mtx);
        if( Overflow() ) // node overflow
                return bt_overflow;
        return bt_ok;
@@ -482,6 +495,7 @@ void CBTreePage<Traits>::SplitPageInto3(std::vector<ObjectInfo>& tmpKeys,
 template <typename Traits>
 Bool CBTreePage<Traits>::SplitRoot()
 {
+       std::unique_lock<std::shared_mutex> lock(m_mtx);
        page_type  *pChild1 = nullptr, *pChild2 = nullptr, *pChild3 = nullptr;
        ObjectInfo oi1, oi2;
        SplitPageInto3( m_Keys,m_SubPages,pChild1, pChild2, pChild3, oi1, oi2);
@@ -504,6 +518,7 @@ Bool CBTreePage<Traits>::SplitRoot()
 template <typename Traits>
 Bool CBTreePage<Traits>::Search(const value_type &key, ref_type &ref)
 {
+       std::unique_lock<std::shared_mutex> lock(m_mtx);
        compare_type compare;
        std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key, compare);
        if( pos >= m_KeyCount ){
@@ -527,12 +542,13 @@ Bool CBTreePage<Traits>::Search(const value_type &key, ref_type &ref)
 template <typename Traits>
 bt_ErrorCode CBTreePage<Traits>::Remove(const value_type &key, const ref_type& ref)
 {
+       std::unique_lock<std::shared_mutex> lock(m_mtx);
        bt_ErrorCode error = bt_ok;
        compare_type compare;
        std::size_t pos = binary_search(m_Keys, 0, m_KeyCount, key, compare);
        if( pos < NumberOfKeys() &&
            !compare(key, m_Keys[pos].key) &&
-           !compare(m_Keys[pos].key, key) /*&& m_Keys[pos].ref == ref*/)
+           !compare(m_Keys[pos].key, key) /*&& m_Keys[pos].ref == ref*/) // We found it !
        {
                // This is a leave: First
                if( !m_SubPages[pos+1] )  // This is a leave ? FIRST CASE !

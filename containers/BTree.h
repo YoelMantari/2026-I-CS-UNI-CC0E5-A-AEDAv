@@ -112,7 +112,6 @@ public:
        std::size_t     height() const;
        std::size_t     GetOrder() const;
 
-
        void            Print (std::ostream &os);
 
        template <typename Func, typename... Args>
@@ -126,7 +125,13 @@ public:
        node_type* FirstThat(Predicate&& pred, Args&&... args)
        {
               std::shared_lock<std::shared_mutex> lock(m_mtx);
-              return m_Root.FirstThat(std::forward<Predicate>(pred), 0, std::forward<Args>(args)...);
+              node_type* found = m_Root.FirstThat(std::forward<Predicate>(pred), 0, std::forward<Args>(args)...);
+              if( !found )
+                     return nullptr;
+
+              static thread_local node_type foundCopy{};
+              foundCopy = *found;
+              return &foundCopy;
        }
 
        iterator begin()
@@ -176,6 +181,21 @@ protected:
        mutable std::shared_mutex m_mtx;
 };
 
+template <typename Traits>
+BTree<Traits>::BTree(std::size_t order, Bool unique)
+                               : m_Root(2 * order  + 1, unique),
+                                 m_Height(1),
+                                 m_Order(order),
+                                 m_NumKeys(0),
+                                 m_Unique(unique)
+{
+       m_Root.SetMaxKeysForChilds(order);
+}
+
+template <typename Traits>
+BTree<Traits>::~BTree()
+{
+}
 
 template <typename Traits>
 std::size_t BTree<Traits>::size() const
@@ -199,28 +219,17 @@ std::size_t BTree<Traits>::GetOrder() const
 }
 
 template <typename Traits>
-BTree<Traits>::BTree(std::size_t order, Bool unique)
-                               : m_Root(2 * order  + 1, unique),
-                                 m_Height(1),
-                                 m_Order(order),
-                                 m_NumKeys(0),
-                                 m_Unique(unique)
-{
-       m_Root.SetMaxKeysForChilds(order);
-}
-
-template <typename Traits>
-BTree<Traits>::~BTree()
-{
-}
-
-template <typename Traits>
 Bool BTree<Traits>::Insert(const value_type& key, const ref_type& ref)
 {
-       std::unique_lock<std::shared_mutex> lock(m_mtx);
-       bt_ErrorCode error = m_Root.Insert(key, ref);
+       bt_ErrorCode error = bt_ok;
+       {
+              std::shared_lock<std::shared_mutex> lock(m_mtx);
+              error = m_Root.Insert(key, ref);
+       }
        if( error == bt_duplicate )
                return false;
+
+       std::unique_lock<std::shared_mutex> lock(m_mtx);
        m_NumKeys++;
        if( error == bt_overflow )
        {
