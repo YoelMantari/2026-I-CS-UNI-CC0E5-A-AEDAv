@@ -108,9 +108,10 @@ public:
        Bool            Insert (const value_type& key, const ref_type& ref);
        Bool            Remove (const value_type& key, const ref_type& ref);
        ref_type        Search (const value_type& key);
-       std::size_t     size() const  { return m_NumKeys; }
-       std::size_t     height() const { return m_Height; }
-       std::size_t     GetOrder() const { return m_Order; }
+       std::size_t     size() const;
+       std::size_t     height() const;
+       std::size_t     GetOrder() const;
+
 
        void            Print (std::ostream &os);
 
@@ -174,6 +175,28 @@ protected:
        Bool            m_Unique;  // Accept the elements only once ?
        mutable std::shared_mutex m_mtx;
 };
+
+
+template <typename Traits>
+std::size_t BTree<Traits>::size() const
+{
+       std::shared_lock<std::shared_mutex> lock(m_mtx);
+       return m_NumKeys;
+}
+
+template <typename Traits>
+std::size_t BTree<Traits>::height() const
+{
+       std::shared_lock<std::shared_mutex> lock(m_mtx);
+       return m_Height;
+}
+
+template <typename Traits>
+std::size_t BTree<Traits>::GetOrder() const
+{
+       std::shared_lock<std::shared_mutex> lock(m_mtx);
+       return m_Order;
+}
 
 template <typename Traits>
 BTree<Traits>::BTree(std::size_t order, Bool unique)
